@@ -1,0 +1,14 @@
+[run]
+task = "clinc150"
+data_dir = "data"
+split = "train"
+
+[encoder]
+dimension = 8192
+max_features = 256
+
+[memory]
+capacity = 2048
+top_k = 16
+key_nnz = 64
+key_scale = 8.0

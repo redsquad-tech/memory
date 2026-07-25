@@ -1,0 +1,24 @@
+[run]
+model = "memory"
+
+[encoder]
+dimension = 1024
+max_features = 128
+
+[memory]
+capacity = 256
+top_k = 16
+key_nnz = 64
+key_scale = 8.0
+
+[update]
+learning_rate_key = 0.2
+learning_rate_value = 0.5
+train_keys = true
+
+[synthetic]
+examples = 20000
+num_states = 64
+num_outputs = 16
+templates_per_state = 12
+drift_at_fraction = 0.5

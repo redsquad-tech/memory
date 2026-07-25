@@ -1,0 +1,20 @@
+[run]
+model = "memory"
+
+[encoder]
+dimension = 128
+max_features = 32
+
+[memory]
+capacity = 16
+top_k = 4
+key_nnz = 16
+key_scale = 4.0
+
+[synthetic]
+examples = 50
+num_states = 8
+num_outputs = 4
+templates_per_state = 4
+noise_vocabulary = 16
+drift_at_fraction = 0.5

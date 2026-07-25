@@ -1,0 +1,12 @@
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+runs/
+data/*
+!data/banking77/
+!data/banking77/**
+dist/
+build/
+*.egg-info/
