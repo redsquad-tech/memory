@@ -448,7 +448,11 @@ def _write_csv_atomic(
     temporary = Path(temporary_name)
     try:
         with os.fdopen(descriptor, "w", encoding="utf-8", newline="") as handle:
-            writer = csv.DictWriter(handle, fieldnames=fieldnames)
+            writer = csv.DictWriter(
+                handle,
+                fieldnames=fieldnames,
+                lineterminator="\n",
+            )
             writer.writeheader()
             writer.writerows(rows)
         os.replace(temporary, path)

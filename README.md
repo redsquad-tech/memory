@@ -1,9 +1,9 @@
 # assocmem
 
-`assocmem` is a CPU-first reference implementation of an online predictive
-associative memory. It learns only the atoms retrieved for the current query,
-can insert a new atom after surprising feedback, and evaluates every event
-before updating on it.
+`assocmem` is a CPU-first reference implementation of online predictive
+associative memory. It contains the original gated-logit memory and a stricter
+categorical mixture memory used to isolate whether local key learning improves
+predictive retrieval geometry.
 
 The implementation intentionally uses a fixed ternary encoder and exact
 retrieval. Active keys have a fixed non-zero L1 norm, preventing a zero key
@@ -55,38 +55,48 @@ The paper experiment is one command:
 ./run_banking77.sh
 ```
 
-It downloads and verifies BANKING77 and runs the complete v2 comparison on
-seeds 0–4. The encoder and its hash seed are identical for every model and
-seed; only the order of the online training stream changes.
+It runs the decoder-correction protocol on BANKING77 for seeds 0–4. There are
+two causal experiments:
 
-The experiment contains two complementary learned-key versus frozen-key
-comparisons:
+- Experiment A reproduces the old shared-birth learned/frozen memories, then
+  evaluates the same final keys with one-hot birth labels and an arithmetic
+  categorical mixture. This isolates the decoder without retraining keys.
+- Experiment B trains learned and frozen keys directly under mixture NLL.
+  Both branches receive the same 4,055 scheduled births; natural insertion and
+  value learning are disabled.
 
-- `shared_*`: both branches receive exactly the same deterministic set of atom
-  births, with identical initial keys and values. This isolates key learning.
-- `natural_*`: both branches use the normal surprise/novelty insertion policy.
-  This measures the end-to-end system, including interactions between learned
-  geometry and insertion.
-
-Keys have 256 fixed support coordinates: the learned branch can change their
-weights, while the frozen branch cannot change keys. Exact kNN uses the same
-energy, `top_k=16`, the empirical online class prior, and retains all 10,003
-training examples while remaining within the same 128 MiB byte budget. The
-online linear baseline uses the provisional post-hoc learning rate `0.03`.
+The primary prior is uniform with mass `1`; empirical prior is an evaluation
+sensitivity only. The fixed protocol uses `top_k=16`, key L1 norm `8`, 256
+fixed support coordinates, and key learning rate `0.2`. Model selection is
+reported on a frozen deterministic 80/20 split of the official train set.
+Evaluation on the official test is exploratory because it was inspected by
+the earlier v2 work.
 
 The command writes two directly usable artifacts in the repository root:
 
-- `banking77_results_v2.csv`: six aggregate model rows plus paired comparison
-  rows with 95% t intervals and favorable-seed counts.
-- `banking77_runs_v2.csv`: one numeric row per model and seed, including all
-  parameters and protocol flags.
+- `banking77_mixture_results_v1.csv`: aggregate model rows and paired
+  learned-minus-frozen effects with 95% t intervals.
+- `banking77_mixture_runs_v1.csv`: numeric rows for every seed, stage, decoder,
+  key mode, and prior sensitivity.
 
-Both the full official test result and a sensitivity result excluding the 25
-normalized train/test text duplicates are reported. The v2 files explicitly
-mark that this official test set was previously inspected and that the chosen
-hyperparameters are provisional/post-hoc; they are not an untouched
-confirmatory result. The earlier run is preserved as
-`banking77_results_v1.csv`.
+In addition to NLL, accuracy, macro-F1, Brier, and ECE, the new files report
+weighted target purity, target retrieval mass, energy margin, Recall@1/4/16,
+and MRR. The earlier v1/v2 artifacts and the old
+`assocmem.experiments.banking77_paper` entry point are preserved for audit.
+
+### Mixture v1 result
+
+The frozen validation comparison is positive on all five seeds. Training keys
+under mixture NLL reduces validation NLL from `2.0241` to `1.4929` bits and
+raises accuracy from `73.17%` to `79.67%`; the paired advantages are `0.5312`
+bits (95% t interval `[0.5165, 0.5458]`) and `6.50` percentage points
+(`[6.24, 6.76]`). Weighted target purity rises from `0.431` to `0.575`, and
+mean energy margin from `0.222` to `0.662`.
+
+On the previously exposed official test, the corresponding learned model
+reaches `1.4625` bits and `80.59%`. This exceeds the old v2 exact kNN accuracy
+(`79.10%`) despite retaining only 4,055 scheduled atoms instead of all 10,003
+examples, but remains below the old online linear reference (`88.41%`).
 
 ## Validation
 

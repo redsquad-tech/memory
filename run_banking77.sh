@@ -10,4 +10,4 @@ if [[ ! -x "$python_bin" ]]; then
 fi
 
 export PYTHONPATH="$repo_dir/src${PYTHONPATH:+:$PYTHONPATH}"
-exec "$python_bin" -m assocmem.experiments.banking77_paper
+exec "$python_bin" -m assocmem.experiments.banking77_mixture

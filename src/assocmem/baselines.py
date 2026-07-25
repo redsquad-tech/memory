@@ -40,6 +40,7 @@ class ExactKNNBaseline:
         pseudocount: float = 1.0,
         prior_mass: float = 1.0,
         key_nnz: int | None = None,
+        prior_mode: str = "empirical",
     ):
         self.dimension = dimension
         self.num_classes = num_classes
@@ -51,8 +52,11 @@ class ExactKNNBaseline:
             raise ValueError("prior_mass must be positive")
         if key_nnz is not None and key_nnz <= 0:
             raise ValueError("key_nnz must be positive or None")
+        if prior_mode not in {"empirical", "uniform"}:
+            raise ValueError("prior_mode must be empirical or uniform")
         self.prior_mass = prior_mass
         self.maximum_key_nnz = key_nnz
+        self.prior_mode = prior_mode
         self.keys = torch.zeros((capacity, dimension), dtype=torch.int8)
         self.key_nnz = torch.zeros(capacity, dtype=torch.int16)
         self.targets = torch.zeros(capacity, dtype=torch.int64)
@@ -61,8 +65,11 @@ class ExactKNNBaseline:
         self.cursor = 0
 
     def predict(self, query: TernaryQuery) -> Prediction:
-        base = self.counts.to(torch.float64) + self.pseudocount
-        base = base / base.sum()
+        if self.prior_mode == "uniform":
+            base = torch.full((self.num_classes,), 1.0 / self.num_classes, dtype=torch.float64)
+        else:
+            base = self.counts.to(torch.float64) + self.pseudocount
+            base = base / base.sum()
         if not self.size:
             probabilities = base.to(torch.float32)
             return Prediction(probabilities, int(probabilities.argmax()))
