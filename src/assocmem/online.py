@@ -1,3 +1,9 @@
+"""Legacy in-process classifier experiment helpers.
+
+The behavioral benchmark must not import this module; its public boundary is
+the JSONL learn/infer process contract in ``adapters/seqbench``.
+"""
+
 from __future__ import annotations
 
 import json

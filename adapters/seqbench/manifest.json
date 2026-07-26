@@ -1,0 +1,10 @@
+{
+  "name": "assocmem",
+  "version": "0.2.0",
+  "capabilities": {
+    "generate": true,
+    "score": true,
+    "learn": true
+  },
+  "external_pretraining": false
+}

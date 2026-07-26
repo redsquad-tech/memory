@@ -204,6 +204,53 @@ def test_full_memory_eviction_rolls_back_every_possible_key(monkeypatch):
     )
 
 
-def test_int16_class_limit_is_explicit():
-    with pytest.raises(ValueError, match="32767"):
-        replace(config(), num_classes=32768)
+def test_class_space_expands_without_dense_decoding(monkeypatch):
+    memory = CategoricalAssociativeMemory(config())
+    memory.expand_classes(400_000, reserve=524_288)
+    assert memory.config.num_classes == 400_000
+    assert memory.birth_label.dtype == torch.int64
+    assert memory.base_counts.numel() == 524_288
+
+    atom = query([1, 4, 9], [1, -1, 1])
+    memory.observe_compact(atom, 399_999, insertion_mode="force")
+
+    def fail(*args, **kwargs):
+        raise AssertionError("dense decoder must not be used")
+
+    monkeypatch.setattr(memory.decoder, "decode", fail)
+    scores = memory.log_probabilities_for(atom, [399_999, 1])
+    assert scores.shape == (2,)
+    assert scores[0] > scores[1]
+    assert memory.predict_class(atom) == 399_999
+
+
+@pytest.mark.parametrize("prior_mode", ["uniform", "empirical"])
+def test_compact_scores_and_updates_match_dense_path(prior_mode):
+    dense_config = replace(config(), prior_mode=prior_mode)
+    dense = CategoricalAssociativeMemory(dense_config)
+    compact = CategoricalAssociativeMemory(dense_config)
+    stream = [
+        (query([1, 4, 9], [1, -1, 1]), 0, "force"),
+        (query([2, 5, 10], [1, -1, 1]), 1, "force"),
+        (query([1, 5, 10], [1, -1, 1]), 0, "skip"),
+    ]
+    for example_id, (item, target, insertion_mode) in enumerate(stream):
+        dense.observe(
+            item,
+            target,
+            origin_id=example_id,
+            insertion_mode=insertion_mode,
+        )
+        compact.observe_compact(
+            item,
+            target,
+            origin_id=example_id,
+            insertion_mode=insertion_mode,
+        )
+        for name in ("W", "birth_label", "usage", "origin_id", "atom_uid"):
+            assert torch.allclose(getattr(dense, name), getattr(compact, name))
+        assert torch.equal(dense.base_counts, compact.base_counts)
+        probe = query([1, 4, 10], [1, -1, 1])
+        dense_log = dense.read(probe).probabilities.to(torch.float64).log()
+        compact_log = compact.log_probabilities_for(probe, [0, 1, 2])
+        assert torch.allclose(dense_log, compact_log, atol=1e-6)

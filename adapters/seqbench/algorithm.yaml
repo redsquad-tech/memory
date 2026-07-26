@@ -1,0 +1,3 @@
+command: ["../../.venv/bin/python", "./assocmem.py"]
+manifest: manifest.json
+initial_model: model

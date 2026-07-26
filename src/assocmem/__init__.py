@@ -3,7 +3,6 @@
 from .categorical import (
     CategoricalAssociativeMemory,
     CategoricalMemoryConfig,
-    CategoricalMemoryOnlineModel,
     CategoricalMixtureDecoder,
     CategoricalUpdateConfig,
 )
@@ -22,7 +21,6 @@ __all__ = [
     "AssociativeMemory",
     "CategoricalAssociativeMemory",
     "CategoricalMemoryConfig",
-    "CategoricalMemoryOnlineModel",
     "CategoricalMixtureDecoder",
     "CategoricalUpdateConfig",
     "EvictionConfig",
@@ -38,4 +36,4 @@ __all__ = [
     "save_checkpoint",
 ]
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"

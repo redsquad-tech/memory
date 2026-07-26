@@ -1,0 +1,51 @@
+{
+  "base_count_argmax": 0,
+  "birth_policy": {
+    "name": "sha256_batch_top_capacity",
+    "seed": 1729
+  },
+  "class_capacity": 0,
+  "encoder": {
+    "casefold": true,
+    "char_ngram_max": 5,
+    "char_ngram_min": 3,
+    "dimension": 8192,
+    "hash_seed": 0,
+    "hash_version": "blake2b-128-v1",
+    "max_features": 256,
+    "unicode_normalization": "NFKC",
+    "word_ngram_max": 2,
+    "word_ngram_min": 1
+  },
+  "encoder_fingerprint": "eacb821bce4b26ea29f28ff8d0b3dd61d57dff9d8bb28bfbb6fd18e45882c4cd",
+  "format": "assocmem-categorical-bench",
+  "format_version": 1,
+  "generation": "map",
+  "memory": {
+    "capacity": 4055,
+    "dimension": 8192,
+    "encoder_fingerprint": "eacb821bce4b26ea29f28ff8d0b3dd61d57dff9d8bb28bfbb6fd18e45882c4cd",
+    "key_nnz": 256,
+    "key_scale": 8.0,
+    "prior_mass": 1.0,
+    "prior_mode": "uniform",
+    "prior_pseudocount": 1.0,
+    "top_k": 16,
+    "update": {
+      "acceptance_tolerance_bits": 1e-08,
+      "backtracking_attempts": 5,
+      "backtracking_factor": 0.5,
+      "fixed_key_support": true,
+      "gradient_clip_norm": 1.0,
+      "learning_rate_key": 0.2,
+      "train_keys": true
+    },
+    "usage_decay": 0.999
+  },
+  "next_atom_uid": 0,
+  "num_classes": 0,
+  "revision": 0,
+  "score_log_floor_nats": -709.782712893384,
+  "size": 0,
+  "step": 0
+}

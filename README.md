@@ -1,9 +1,9 @@
 # assocmem
 
 `assocmem` is a CPU-first reference implementation of online predictive
-associative memory. It contains the original gated-logit memory and a stricter
-categorical mixture memory used to isolate whether local key learning improves
-predictive retrieval geometry.
+associative memory. Its behavioral benchmark is model-agnostic: it sees an
+opaque checkpoint and only calls `learn` and `infer`. Retrieval results,
+prepared reads, revisions, gradients and class IDs never cross that boundary.
 
 The implementation intentionally uses a fixed ternary encoder and exact
 retrieval. Active keys have a fixed non-zero L1 norm, preventing a zero key
@@ -46,6 +46,42 @@ performs local learning, optional insertion/eviction, usage accounting, and
 the final prior update. Insertion requires both residual surprise and geometric
 novelty; key updates may replace a bounded number of support coordinates and
 are accepted only when the full-read loss does not increase.
+
+These are white-box library operations, not the benchmark interface.
+
+## Behavioral benchmark adapter
+
+The model-independent benchmark now lives in
+[`redsquad-tech/seqbench`](https://github.com/redsquad-tech/seqbench). This
+repository contains only the `assocmem` adapter under `adapters/seqbench/`:
+
+```text
+assocmem.py learn --model-in ... --examples ... --model-out ... --budget ... --seed ...
+assocmem.py infer --model ... --requests ... --output ... --budget ...
+```
+
+Training rows contain only `id`, `input`, and string `target`. Inference supports
+`generate` and absolute normalized `score(value)` requests. The checkpoint is
+opaque and `infer` is verified not to mutate it.
+
+The categorical memory has a compact whole-value path. It scores requested
+values in `O(top_k × requested_values)` and generates from retrieved labels
+without allocating a vector over the complete output registry. Target strings
+are stored in the checkpoint's SQLite registry, so ReCOGS/SLOG can be evaluated
+without pretending that novel structured outputs are a 32k-class problem.
+
+After preparing task CSV files in `seqbench`, run:
+
+```bash
+seqbench run /path/to/seqbench/specs/runs/full_v1.yaml \
+  --algorithm adapters/seqbench/algorithm.yaml \
+  --tasks /path/to/full.csv \
+  --output runs/seqbench
+```
+
+Unknown output strings have exact probability zero and are returned as
+`log_probability: null`. Dataset preparation, probes, metrics, verdicts, and
+reports are intentionally absent from the model library.
 
 ## Experiments
 
