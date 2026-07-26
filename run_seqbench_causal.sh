@@ -59,7 +59,11 @@ for entry in \
 do
   label="${entry%%:*}"
   algorithm="${entry#*:}"
-  for seed in $seeds
+  model_seeds="$seeds"
+  if [ "$mode" = "full" ] && [ "$label" = "exact_knn" ]; then
+    model_seeds="0"
+  fi
+  for seed in $model_seeds
   do
     destination="$output/$label/seed-$seed"
     if [ -f "$destination/metrics.json" ]; then
