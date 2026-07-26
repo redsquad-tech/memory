@@ -8,14 +8,18 @@ import sys
 from pathlib import Path
 
 import pytest
+import torch
 
-from assocmem.bench_checkpoint import checkpoint_content_hash
+from assocmem.bench_checkpoint import BenchCheckpoint, checkpoint_content_hash
 
 ROOT = Path(__file__).resolve().parents[1]
 ADAPTER = ROOT / "adapters" / "seqbench" / "assocmem.py"
 LEARN = "learn"
 INFER = "infer"
 MODEL = ROOT / "adapters" / "seqbench" / "model"
+FROZEN_MODEL = ROOT / "adapters" / "seqbench" / "model-frozen"
+KNN_ADAPTER = ROOT / "adapters" / "seqbench" / "exact_knn.py"
+KNN_MODEL = ROOT / "adapters" / "seqbench" / "model-exact-knn"
 
 
 def write_jsonl(path: Path, rows: list[dict]) -> None:
@@ -63,6 +67,41 @@ def run(operation: str, *args: Path) -> subprocess.CompletedProcess[str]:
         capture_output=True,
         check=False,
     )
+
+
+def run_knn(operation: str, *args: Path) -> subprocess.CompletedProcess[str]:
+    adapter = KNN_ADAPTER
+    if operation == LEARN:
+        command = [
+            sys.executable,
+            str(adapter),
+            "learn",
+            "--model-in",
+            str(args[0]),
+            "--examples",
+            str(args[1]),
+            "--model-out",
+            str(args[2]),
+            "--budget",
+            str(args[3]),
+            "--seed",
+            "42",
+        ]
+    else:
+        command = [
+            sys.executable,
+            str(adapter),
+            "infer",
+            "--model",
+            str(args[0]),
+            "--requests",
+            str(args[1]),
+            "--output",
+            str(args[2]),
+            "--budget",
+            str(args[3]),
+        ]
+    return subprocess.run(command, cwd=ROOT, text=True, capture_output=True, check=False)
 
 
 def test_process_contract_roundtrip_and_checkpoint_purity(tmp_path: Path) -> None:
@@ -178,3 +217,80 @@ def test_continued_learning_appends_targets_and_preserves_input_model(
     finally:
         connection.close()
     assert rows == [(0, "first"), (1, "second")]
+
+
+def test_frozen_and_learned_use_identical_births_and_support(tmp_path: Path) -> None:
+    examples = tmp_path / "examples.jsonl"
+    learned = tmp_path / "learned"
+    frozen = tmp_path / "frozen"
+    write_jsonl(
+        examples,
+        [
+            {"id": str(index), "input": f"shared input {index}", "target": str(index % 3)}
+            for index in range(12)
+        ],
+    )
+    assert run(LEARN, MODEL, examples, learned).returncode == 0
+    assert run(LEARN, FROZEN_MODEL, examples, frozen).returncode == 0
+    with BenchCheckpoint(learned) as left, BenchCheckpoint(frozen) as right:
+        assert left.memory is not None and right.memory is not None
+        assert torch.equal(
+            left.memory.birth_label[: left.memory.size],
+            right.memory.birth_label[: right.memory.size],
+        )
+        assert torch.equal(
+            left.memory.origin_id[: left.memory.size],
+            right.memory.origin_id[: right.memory.size],
+        )
+        assert torch.equal(
+            left.memory.W[: left.memory.size] != 0,
+            right.memory.W[: right.memory.size] != 0,
+        )
+
+
+def test_exact_knn_process_roundtrip_and_budget(tmp_path: Path) -> None:
+    examples = tmp_path / "examples.jsonl"
+    budget = tmp_path / "budget.json"
+    model = tmp_path / "knn"
+    requests = tmp_path / "requests.jsonl"
+    predictions = tmp_path / "predictions.jsonl"
+    budget.write_text(
+        json.dumps(
+            {
+                "persistent_model_bytes": 10_000_000,
+                "train_wall_seconds": 30,
+                "infer_wall_seconds_per_example": 1,
+            }
+        ),
+        encoding="utf-8",
+    )
+    write_jsonl(
+        examples,
+        [
+            {"id": "1", "input": "alpha", "target": "x"},
+            {"id": "2", "input": "beta", "target": "y"},
+            {"id": "3", "input": "alpha again", "target": "x"},
+        ],
+    )
+    result = run_knn(LEARN, KNN_MODEL, examples, model, budget)
+    assert result.returncode == 0, result.stderr
+    before = checkpoint_content_hash(model)
+    write_jsonl(
+        requests,
+        [
+            {"id": "g", "mode": "generate", "input": "alpha", "seed": 0, "max_output_tokens": 8},
+            {"id": "x", "mode": "score", "input": "alpha", "value": "x"},
+            {"id": "y", "mode": "score", "input": "alpha", "value": "y"},
+            {"id": "z", "mode": "score", "input": "alpha", "value": "z"},
+        ],
+    )
+    result = run_knn(INFER, model, requests, predictions, budget)
+    assert result.returncode == 0, result.stderr
+    rows = [json.loads(line) for line in predictions.read_text().splitlines()]
+    assert rows[0]["output"] == "x"
+    assert rows[3]["log_probability"] is None
+    assert sum(math.exp(row["log_probability"]) for row in rows[1:3]) == pytest.approx(
+        1.0, abs=1e-6
+    )
+    assert checkpoint_content_hash(model) == before
+    assert sum(path.stat().st_size for path in model.rglob("*") if path.is_file()) < 10_000_000

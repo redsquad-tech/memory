@@ -1,5 +1,5 @@
 {
-  "name": "assocmem-learned",
+  "name": "exact-knn",
   "version": "0.2.0",
   "capabilities": {
     "generate": true,

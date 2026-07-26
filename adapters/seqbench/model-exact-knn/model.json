@@ -1,0 +1,25 @@
+{
+  "capacity": 0,
+  "cursor": 0,
+  "encoder": {
+    "casefold": true,
+    "char_ngram_max": 5,
+    "char_ngram_min": 3,
+    "dimension": 8192,
+    "hash_seed": 0,
+    "hash_version": "blake2b-128-v1",
+    "max_features": 256,
+    "unicode_normalization": "NFKC",
+    "word_ngram_max": 2,
+    "word_ngram_min": 1
+  },
+  "encoder_fingerprint": "eacb821bce4b26ea29f28ff8d0b3dd61d57dff9d8bb28bfbb6fd18e45882c4cd",
+  "format": "assocmem-exact-knn-bench",
+  "format_version": 1,
+  "key_nnz": 256,
+  "key_scale": 8.0,
+  "num_classes": 0,
+  "prior_mass": 1.0,
+  "size": 0,
+  "top_k": 16
+}

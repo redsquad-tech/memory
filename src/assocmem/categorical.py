@@ -376,6 +376,28 @@ class CategoricalAssociativeMemory:
             return torch.empty(0, dtype=torch.float64, device=self.device)
         return torch.stack(values).log()
 
+    def predict_and_log_probabilities(
+        self,
+        query: TernaryQuery,
+        target_ids: Sequence[int],
+        *,
+        prior_mode: PriorMode | None = None,
+    ) -> tuple[int, torch.Tensor]:
+        """Return MAP prediction and requested log probabilities from one retrieval."""
+        read = self._retrieve_evidence(query, prior_mode=prior_mode)
+        values = [
+            self._compact_probability(read, int(target)).clamp_min(
+                torch.finfo(torch.float64).tiny
+            )
+            for target in target_ids
+        ]
+        logs = (
+            torch.stack(values).log()
+            if values
+            else torch.empty(0, dtype=torch.float64, device=self.device)
+        )
+        return read.prediction, logs
+
     def predict_class(
         self, query: TernaryQuery, *, prior_mode: PriorMode | None = None
     ) -> int:

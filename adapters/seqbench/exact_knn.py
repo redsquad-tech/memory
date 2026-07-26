@@ -10,7 +10,7 @@ import torch
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "src"))
 
-from assocmem.bench_protocol import run_infer, run_learn
+from assocmem.knn_bench_protocol import run_knn_infer, run_knn_learn
 
 
 def parser() -> argparse.ArgumentParser:
@@ -35,14 +35,14 @@ def main() -> int:
     torch.set_num_threads(8)
     try:
         if args.operation == "learn":
-            run_learn(
+            run_knn_learn(
                 args.model_in,
                 args.examples,
                 args.model_out,
-                seed=args.seed,
+                args.budget,
             )
         else:
-            run_infer(args.model, args.requests, args.output)
+            run_knn_infer(args.model, args.requests, args.output)
     except (OSError, TypeError, ValueError, RuntimeError) as exc:
         print(f"ERROR: {exc}", file=sys.stderr)
         return 1

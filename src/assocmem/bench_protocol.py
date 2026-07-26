@@ -178,58 +178,87 @@ def run_infer(
     if predictions == model or model in predictions.parents:
         raise ValueError("predictions path must be outside checkpoint")
 
+    validated: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    for line_number, row in _jsonl(requests):
+        mode = row.get("mode")
+        expected = (
+            {"id", "mode", "input", "seed", "max_output_tokens"}
+            if mode == "generate"
+            else {"id", "mode", "input", "value"}
+        )
+        if mode not in {"generate", "score"}:
+            raise ValueError(f"{requests}:{line_number}: invalid mode")
+        _validate_exact_keys(row, expected, path=requests, line_number=line_number)
+        request_id = _validate_identifier(
+            row["id"], path=requests, line_number=line_number
+        )
+        if request_id in seen:
+            raise ValueError(f"{requests}:{line_number}: duplicate id {request_id!r}")
+        seen.add(request_id)
+        if not isinstance(row["input"], str):
+            raise TypeError(f"{requests}:{line_number}: input must be a string")
+        if mode == "generate":
+            if not isinstance(row["seed"], int) or isinstance(row["seed"], bool):
+                raise ValueError(f"{requests}:{line_number}: seed must be an integer")
+            if (
+                not isinstance(row["max_output_tokens"], int)
+                or isinstance(row["max_output_tokens"], bool)
+                or row["max_output_tokens"] <= 0
+            ):
+                raise ValueError(
+                    f"{requests}:{line_number}: max_output_tokens must be positive"
+                )
+        elif not isinstance(row["value"], str):
+            raise ValueError(f"{requests}:{line_number}: value must be a string")
+        validated.append(row)
+
     def predictions_iter() -> Iterator[dict[str, Any]]:
         with BenchCheckpoint(model) as checkpoint:
-            seen: set[str] = set()
-            for line_number, row in _jsonl(requests):
-                mode = row.get("mode")
-                expected = (
-                    {"id", "mode", "input", "seed", "max_output_tokens"}
-                    if mode == "generate"
-                    else {"id", "mode", "input", "value"}
-                )
-                if mode not in {"generate", "score"}:
-                    raise ValueError(f"{requests}:{line_number}: invalid mode")
-                _validate_exact_keys(row, expected, path=requests, line_number=line_number)
-                request_id = _validate_identifier(
-                    row["id"], path=requests, line_number=line_number
-                )
-                if request_id in seen:
-                    raise ValueError(f"{requests}:{line_number}: duplicate id {request_id!r}")
-                seen.add(request_id)
-                if not isinstance(row["input"], str):
-                    raise TypeError(f"{requests}:{line_number}: input must be a string")
-                if mode == "generate":
-                    if not isinstance(row["seed"], int) or isinstance(row["seed"], bool):
-                        raise ValueError(f"{requests}:{line_number}: seed must be an integer")
-                    if (
-                        not isinstance(row["max_output_tokens"], int)
-                        or isinstance(row["max_output_tokens"], bool)
-                        or row["max_output_tokens"] <= 0
-                    ):
-                        raise ValueError(
-                            f"{requests}:{line_number}: max_output_tokens must be positive"
-                        )
-                    if checkpoint.memory is None:
-                        output = ""
-                    else:
-                        target = checkpoint.memory.predict_class(
-                            checkpoint.encoder.encode(row["input"])
-                        )
-                        output = checkpoint.target_value(target)
-                    yield {"id": request_id, "output": output}
+            responses: list[dict[str, Any] | None] = [None] * len(validated)
+            groups: dict[str, list[int]] = {}
+            for index, row in enumerate(validated):
+                groups.setdefault(row["input"], []).append(index)
+            for input_text, indices in groups.items():
+                known: list[tuple[int, int]] = []
+                for index in indices:
+                    row = validated[index]
+                    if row["mode"] == "score":
+                        target = checkpoint.target_id(row["value"])
+                        if target is None:
+                            responses[index] = {
+                                "id": row["id"],
+                                "log_probability": None,
+                            }
+                        else:
+                            known.append((index, target))
+                if checkpoint.memory is None:
+                    prediction = None
+                    logs: list[float] = []
                 else:
-                    if not isinstance(row["value"], str):
-                        raise ValueError(f"{requests}:{line_number}: value must be a string")
-                    target = checkpoint.target_id(row["value"])
-                    if target is None or checkpoint.memory is None:
-                        log_probability = None
-                    else:
-                        log_probability = float(
-                            checkpoint.memory.log_probabilities_for(
-                                checkpoint.encoder.encode(row["input"]), [target]
-                            )[0]
-                        )
-                    yield {"id": request_id, "log_probability": log_probability}
+                    prediction, tensor = checkpoint.memory.predict_and_log_probabilities(
+                        checkpoint.encoder.encode(input_text),
+                        [target for _, target in known],
+                    )
+                    logs = [float(value) for value in tensor]
+                log_cursor = 0
+                for index in indices:
+                    row = validated[index]
+                    if row["mode"] == "generate":
+                        responses[index] = {
+                            "id": row["id"],
+                            "output": (
+                                "" if prediction is None else checkpoint.target_value(prediction)
+                            ),
+                        }
+                    elif responses[index] is None:
+                        responses[index] = {
+                            "id": row["id"],
+                            "log_probability": logs[log_cursor],
+                        }
+                        log_cursor += 1
+            for response in responses:
+                assert response is not None
+                yield response
 
     _atomic_predictions(predictions, predictions_iter())

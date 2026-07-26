@@ -1,0 +1,3 @@
+command: ["../../.venv/bin/python", "./exact_knn.py"]
+manifest: manifest-exact-knn.json
+initial_model: model-exact-knn
