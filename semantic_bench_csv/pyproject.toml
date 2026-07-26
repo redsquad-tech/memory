@@ -1,0 +1,9 @@
+[project]
+name = "semantic-bench-csv"
+version = "0.1.0"
+description = "Download and normalize diagnostic NLP benchmarks into a common CSV schema"
+requires-python = ">=3.10"
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]

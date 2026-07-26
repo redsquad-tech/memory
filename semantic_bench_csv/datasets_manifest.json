@@ -1,0 +1,45 @@
+{
+  "mrcr": {
+    "kind": "huggingface",
+    "repo_id": "openai/mrcr",
+    "revision": "f4c69fae7cf81f7ca26b9fee34b392a50f6b8a1d",
+    "description": "OpenAI MRCR long-context retrieval"
+  },
+  "babi": {
+    "kind": "archive",
+    "url": "https://parl.ai/downloads/babi/babi.tar.gz",
+    "size": 19212062,
+    "sha256": "f7f0bee187efca0d81c3daac1b162cda4eb7f9505dee5ad6846eabbed3dbf92e",
+    "description": "Facebook bAbI QA"
+  },
+  "babilong": {
+    "kind": "huggingface",
+    "repo_id": "RMT-team/babilong",
+    "revision": "ee0d588794c7ac098062ee0d247c733d62e94fe2",
+    "description": "BABILong long-context bAbI"
+  },
+  "clutrr": {
+    "kind": "huggingface",
+    "repo_id": "CLUTRR/v1",
+    "revision": "6e5a7ac1425b8009b81ebc78c4f2b4d8ccd77722",
+    "description": "CLUTRR relational reasoning"
+  },
+  "proofwriter": {
+    "kind": "huggingface",
+    "repo_id": "tasksource/proofwriter",
+    "revision": "ee4d22d49b8486786cbc01c0b6f6f6266e56f3bd",
+    "description": "ProofWriter natural-language theorem proving"
+  },
+  "recogs": {
+    "kind": "git",
+    "url": "https://github.com/frankaging/ReCOGS.git",
+    "commit": "1b6eca8ff4dca5fd2fb284a7d470998af5083beb",
+    "description": "ReCOGS compositional semantic parsing"
+  },
+  "slog": {
+    "kind": "git",
+    "url": "https://github.com/bingzhilee/SLOG.git",
+    "commit": "1c55df85006d58b842520c79dcb8e1b43df2836f",
+    "description": "SLOG structural generalization"
+  }
+}

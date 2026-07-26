@@ -1,0 +1,9 @@
+.venv/
+__pycache__/
+.pytest_cache/
+*.py[cod]
+data/raw/
+data/csv/
+data/tasks.csv
+data/.*.partial-*
+data/.*.sqlite
