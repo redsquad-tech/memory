@@ -73,11 +73,13 @@ without pretending that novel structured outputs are a 32k-class problem.
 After preparing task CSV files in `seqbench`, run:
 
 ```bash
-seqbench run /path/to/seqbench/specs/runs/full_v1.yaml \
-  --algorithm adapters/seqbench/algorithm.yaml \
-  --tasks /path/to/full.csv \
-  --output runs/seqbench
+./run_seqbench_causal_v2.sh pilot
 ```
+
+The script evaluates learned keys, frozen keys, and exact kNN under the same
+causal-v2 selections. Exact kNN declares itself seed-invariant and is executed
+once in a full run; `seqbench compare` broadcasts that fixed prediction vector
+over the learned models' seed axis for paired uncertainty estimates.
 
 Unknown output strings have exact probability zero and are returned as
 `log_probability: null`. Dataset preparation, probes, metrics, verdicts, and

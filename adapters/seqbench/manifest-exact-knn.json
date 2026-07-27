@@ -6,5 +6,6 @@
     "score": true,
     "learn": true
   },
+  "seed_invariant": true,
   "external_pretraining": false
 }
