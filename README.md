@@ -76,6 +76,20 @@ After preparing task CSV files in `seqbench`, run:
 ./run_seqbench_causal_v2.sh pilot
 ```
 
+For fast hypothesis screening:
+
+```bash
+cd ../seqbench
+./prepare_screen_v1.sh
+cd ../memory
+./run_seqbench_quick.sh
+```
+
+The quick runner reuses a saved exact-kNN baseline. A possible improvement on
+any behavioral property promotes the candidate to the full benchmark. A
+candidate with no signal is checked on two additional seeds before it can be
+dropped.
+
 The script evaluates learned keys, frozen keys, and exact kNN under the same
 causal-v2 selections. Exact kNN declares itself seed-invariant and is executed
 once in a full run; `seqbench compare` broadcasts that fixed prediction vector
